@@ -17,9 +17,10 @@ jobs:
         shell: bash
 
     steps:
+      # Checkout Repository
       - name: Checkout
         uses: actions/checkout@v4
-
+      # Authenticate to GCP
       - name: Authenticate to GCP
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS_JSON }}
@@ -27,26 +28,26 @@ jobs:
           echo "$GOOGLE_APPLICATION_CREDENTIALS" > gcp-key.json
           gcloud auth activate-service-account --key-file=gcp-key.json
           gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
-
+      # Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1
         with:
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
-      - name: Terraform Init
-        run: terraform init
+      # - name: Terraform Init
+      #  run: terraform init
 
-      - name: Terraform Plan
-        run: terraform plan -input=false -var="project_id=${{ secrets.GCP_PROJECT_ID }}" -var="region=us-central1"
+      # - name: Terraform Plan
+      #  run: terraform plan -input=false -var="project_id=${{ secrets.GCP_PROJECT_ID }}" -var="region=us-central1"
 
       # Note: Uncomment the apply block to apply changes, or uncomment the destroy block to destroy resources
       # =====================================================================================================
-      - name: Terraform Apply
-        run: terraform apply -auto-approve -input=false -var="project_id=${{ secrets.GCP_PROJECT_ID }}" -var="region=us-central1"
+      # - name: Terraform Apply
+      #  run: terraform apply -auto-approve -input=false -var="project_id=${{ secrets.GCP_PROJECT_ID }}" -var="region=us-central1"
 
-      # - name: Terraform Destroy
-      #  run: terraform destroy -auto-approve -input=false -var="project_id=${{ secrets.GCP_PROJECT_ID }}" -var="region=us-central1"
-
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve -input=false -var="project_id=${{ secrets.GCP_PROJECT_ID }}" -var="region=us-central1"
+      # Install gke-gcloud-auth-plugin
       # =============================================
       - name: Install gke-gcloud-auth-plugin
         run: |
@@ -56,17 +57,17 @@ jobs:
           echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
           sudo apt-get update && sudo apt-get install google-cloud-cli -y
           sudo apt-get install google-cloud-cli-gke-gcloud-auth-plugin -y
-
+      # Configure kubectl for GKE
       - name: Configure kubectl for GKE
         run: |
           gcloud container clusters get-credentials dev-cluster --zone us-central1-a --project ${{ secrets.GCP_PROJECT_ID }}
-
+      # Deploy CertManager
       - name: Deploy CertManager
         run: |
           kubectl create namespace cert-manager || true
           kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.2/cert-manager.yaml
           kubectl get pod -n cert-manager
-
+      # Install Helm
       - name: Install Helm
         run: |
           curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
@@ -74,13 +75,13 @@ jobs:
           echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
           sudo apt-get update
           sudo apt-get install helm -y
-
+      # Deploy Nginx-Controller
       - name: Deploy Nginx-Controller
         run: |
           helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
           kubectl create namespace ingress-nginx || true
           helm install ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx
-
+      # Configure cluster issuer
       - name: Configure Cluster Issuer
         run: |
           kubectl apply -f clusterissuer.yaml
