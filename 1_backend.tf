@@ -5,7 +5,7 @@ terraform {
 
 
     workspaces { 
-      name = "bank-app-infrastructure"  
+      name = "bank-app-infratructure"  
     } 
   } 
 }
