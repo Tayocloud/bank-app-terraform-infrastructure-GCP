@@ -1,11 +1,11 @@
 terraform { 
   cloud { 
     
-    organization = "banking-orga" 
+    organization = "banking-finance" 
 
 
     workspaces { 
-      name = "gcp-deployment"  
+      name = "bank-app-infrastructure"  
     } 
   } 
 }
